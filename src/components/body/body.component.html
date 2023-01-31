@@ -1,0 +1,666 @@
+<datatable-selection #selector [selected]="selected" [rows]="temp" [selectCheck]="selectCheck" [selectEnabled]="selectEnabled" [selectionType]="selectionType" [rowIdentity]="rowIdentity" (select)="select.emit($event)" (activate)="activate.emit($event)">
+    <datatable-progress *ngIf="loadingIndicator">
+    </datatable-progress>
+    <datatable-scroller *ngIf="rows?.length" [scrollbarV]="scrollbarV" [scrollbarH]="scrollbarH" [scrollHeight]="scrollHeight" [scrollWidth]="columnGroupWidths.total" (scroll)="onBodyScroll($event)">
+
+
+
+        <datatable-row-wrapper *ngFor="let row of temp; let i = index; trackBy: rowTrackingFn;" [ngStyle]="getRowsStyles(row)" [rowDetail]="rowDetail" [detailRowHeight]="getDetailRowHeight(row,i)" [row]="row" [rowIndex]="getRowIndex(row)" [expanded]="getRowExpanded(row)"
+            (rowContextmenu)="rowContextmenu.emit($event)">
+
+           
+
+            <!--mode table-->
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='Model_Table'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 55px;top: 7px;padding: 0px 0">
+
+                    <li class="disabled" style="color:gray"><a>Edit</a></li>
+
+                    <li *ngIf="row.category !== 'System' && (row.inactivatable=='Both Model Table and Records' || row.inactivatable=='Model Table Only') && row.inactivatable!=='Neither Model Table or Records' && row.inactivatable!=='Records Only' && row.recordState!=='Inactive'">
+                        <a (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">Inactive</a>
+                    </li>
+
+                    <li *ngIf="row.category !== 'System' && (row.inactivatable=='Both Model Table and Records' || row.inactivatable=='Model Table Only') && row.inactivatable!=='Neither Model Table or Records' && row.inactivatable!=='Records Only' && row.recordState=='Inactive'">
+                        <a (click)="changeState.emit({state:'Active', row:row});isRowMenuOpen=false">Reactive</a>
+                    </li>
+
+                    <li *ngIf="(row.archivable=='Both Model Table and Records Permanent' || row.archivable=='Both Model Table and Records Restorable' || row.archivable=='Model Table Only Permanent' || row.archivable=='Model Table Only Restorable') && row.recordState!=='Archived Restorable' && row.recordState!=='Archived Permanently'">
+                        <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Archive</a>
+                    </li>
+
+                    <li *ngIf="(row.archivable=='Both Model Table and Records Restorable' || row.archivable=='Model Table Only Restorable') && row.recordState=='Archived Restorable'">
+                        <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Restore</a>
+                    </li>
+
+                    <li *ngIf="utils.isStateChangeToLineOut(row,true) && row.recordState!=='Soft Deleted'">
+                        <a (click)="changeState.emit({state:'Soft Deleted', row:row});isRowMenuOpen=false">Soft Delete</a>
+                    </li>
+
+                    <li><a (click)="auditlog.emit({id:row.id})">Audit Log</a></li>
+                </ul>
+
+            </div>
+
+
+
+            <!--other mrv-->
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='Person'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 55px;top: 7px;    padding: 0px 0">
+
+                    <li class="disabled" style="color:gray"><a>Edit</a></li>
+
+                    <li *ngIf="utils.isStateChangeToInactive(utils.model_table_details) && utils.model_table_details.recordState!=='Inactive'">
+                        <a (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">Inactive</a>
+                    </li>
+
+                    <li *ngIf="utils.isStateChangeToInactive(utils.model_table_details) && row.recordState=='Inactive'">
+                        <a (click)="changeState.emit({state:'Active', row:row});isRowMenuOpen=false">Reactive</a>
+                    </li>
+
+                    <li *ngIf="utils.isStateChangeToArchive(utils.model_table_details) &&  utils.model_table_details.recordState!=='Archived Restorable' && utils.model_table_details.recordState!=='Archived Permanently'">
+                        <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Archive</a>
+                    </li>
+
+                    <li *ngIf="(utils.model_table_details.archivable=='Records Only Restorable' || utils.model_table_details.archivable=='Both Model Table and Records Restorable') && utils.model_table_details.recordState=='Archived Restorable'">
+                        <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Restore</a>
+                    </li>
+
+                    <li *ngIf="utils.isStateChangeToLineOut(utils.model_table_details) && utils.model_table_details.recordState!=='Soft Deleted'">
+                        <a (click)="changeState.emit({state:'Soft Deleted', row:row});isRowMenuOpen=false">Soft Delete</a>
+                    </li>
+
+                    <li><a (click)="auditlog.emit({row:row})">Audit Log</a></li>
+                </ul>
+            </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+            <!-- Recorc Audit Log -->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='Record_Audit'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+               
+
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 55px;top: 7px;    padding: 0px 0">
+                    <li>
+                        <a (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">Inactive</a>
+                    </li>
+                    <li>
+                        <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Archive</a>
+                    </li>
+                    <li>
+                        <a (click)="changeState.emit({state:'Soft Deleted', row:row});isRowMenuOpen=false">Soft Delete</a>
+                    </li>
+                </ul>
+
+
+            </div>
+
+            <!-- User Session -->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='User_Session'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+              
+
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 55px;top: 7px;    padding: 0px 0">
+                    <li *ngIf="utils.isStateChangeToInactive(utils.model_table_details) && utils.model_table_details.recordState!=='Inactive'">
+                        <a (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">Inactive</a>
+                    </li>
+                    <li *ngIf="utils.model_table_details?.inactivatable=='Records Only' && row.recordState=='Inactive'">
+                        <a (click)="changeState.emit({state:'Active', row:row});isRowMenuOpen=false">Reactive</a>
+                    </li>
+
+                    <li *ngIf="utils.isStateChangeToArchive(utils.model_table_details) && utils.model_table_details.recordState!=='Archived Restorable' && utils.model_table_details.recordState!=='Archived Permanently'">
+                        <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Archive</a>
+                    </li>
+                    <li *ngIf="utils.model_table_details?.archivable=='Records Only Restorable' && utils.model_table_details.recordState=='Archived Restorable'">
+                        <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Restore</a>
+                    </li>
+
+                    <li *ngIf="utils.isStateChangeToLineOut(utils.model_table_details) && utils.model_table_details.recordState!=='Soft Deleted'">
+                        <a (click)="changeState.emit({state:'Soft Deleted', row:row});isRowMenuOpen=false">Soft Delete</a>
+                    </li>
+                   
+                </ul>
+            </div>
+
+            <!-- User Session list -->
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='User_Session_list'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+           
+
+
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 55px;top: 7px;    padding: 0px 0">
+                    <li class="disabled" style="color:gray">
+                        <a>Edit</a>
+                    </li>
+                    <li *ngIf="utils.isStateChangeToInactive(utils.model_table_details) && utils.model_table_details?.recordState!=='Inactive'">
+                        <a (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">Inactive</a>
+                    </li>
+                    <li *ngIf="utils.model_table_details?.inactivatable=='Records Only' && row.recordState=='Inactive'">
+                        <a (click)="changeState.emit({state:'Active', row:row});isRowMenuOpen=false">Reactive</a>
+                    </li>
+
+                    <li *ngIf="utils.isStateChangeToArchive(utils.model_table_details) &&  utils.model_table_details.recordState!=='Archived Restorable' && utils.model_table_details.recordState!=='Archived Permanently'">
+                        <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Archive</a>
+                    </li>
+                    <li *ngIf="utils.model_table_details?.archivable=='Records Only Restorable' &&  utils.model_table_details.recordState=='Archived Restorable'">
+                        <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Restore</a>
+                    </li>
+
+                    <li *ngIf="utils.isStateChangeToLineOut(utils.model_table_details) && utils.model_table_details?.recordState!=='Soft Deleted'">
+                        <a (click)="changeState.emit({state:'Soft Deleted', row:row});isRowMenuOpen=false">Soft Delete</a>
+                    </li>
+                    <li>
+                        <a (click)="auditlog.emit({row:row})">Audit Log</a>
+                    </li>
+                </ul>
+
+            </div>
+
+            <!-- Navigation -->
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='Navigation'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+                
+
+
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 55px;top: 7px;    padding: 0px 0">
+                    <li class="disabled" style="color:gray">
+                        <a>Edit</a>
+                    </li>
+                    <li *ngIf="utils.isStateChangeToInactive(utils.model_table_details) && utils.model_table_details.recordState!=='Inactive'">
+                        <a (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">Inactive</a>
+                    </li>
+                    <li *ngIf="utils.model_table_details.inactivatable=='Records Only' && row.recordState=='Inactive'">
+                        <a (click)="changeState.emit({state:'Active', row:row});isRowMenuOpen=false">Reactive</a>
+                    </li>
+
+                    <li *ngIf="utils.isStateChangeToArchive(utils.model_table_details) && utils.model_table_details.recordState!=='Archived Restorable' && utils.model_table_details.recordState!=='Archived Permanently'">
+                        <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Archive</a>
+                    </li>
+                    <li *ngIf="utils.model_table_details.archivable=='Records Only Restorable' && utils.model_table_details.recordState=='Archived Restorable'">
+                        <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Restore</a>
+                    </li>
+
+                    <li *ngIf="utils.isStateChangeToLineOut(utils.model_table_details) && utils.model_table_details.recordState!=='Soft Deleted'">
+                        <a (click)="changeState.emit({state:'Soft Deleted', row:row});isRowMenuOpen=false">Soft Delete</a>
+                    </li>
+                    <li>
+                        <a (click)="auditlog.emit({row:row})">Audit Log</a>
+                    </li>
+                </ul>
+            </div>
+
+            <!--MTx File Manager -->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='MTx'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 50px;top: 0px;  padding: 5px;">
+                    <li>
+
+                        <span class="icon-width-18 glyphicon glyphicon-pencil disabled ng-scope" title="Edit Inline"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-triangle-top" title="Set Inactive" (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">
+                </span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-folder-close" title="Archive" (click)="changeState.emit({state:'Archived',row:row});isRowMenuOpen=false"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-ban-circle" title="Soft Delete" (click)="changeState.emit({state:'Soft Deleted',row:row});isRowMenuOpen=false"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-question-sign  ng-scope" title="Audit Log" (click)="auditlog.emit({row:row})"></span>
+                    </li>
+                </ul>
+            </div>
+
+            <!--Model View List Component-->
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='modelViewList'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+               
+
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 55px;top: 7px;    padding: 0px 0">
+                    <li>
+                        <a (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">Inactive</a>
+                    </li>
+                    <li>
+                        <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Archive</a>
+                    </li>
+                    <li>
+                        <a (click)="changeState.emit({state:'Soft Deleted', row:row});isRowMenuOpen=false">Soft Delete</a>
+                    </li>
+                    <li>
+                        <a (click)="auditlog.emit({row:row})">Audit Log</a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Person -->
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='Person'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 55px;top: 7px;    padding: 0px 0">
+                    <li class="disabled" style="color:gray">
+                        <a>Edit</a>
+                    </li>
+                    <li *ngIf="utils.isStateChangeToInactive(utils.model_table_details) && utils.model_table_details.recordState!=='Inactive'">
+                        <a (click)="changeState.emit({state:'Inactive', row:row,reasonforEdit:utils.model_table_details.reasonforEdit,authentication:utils.model_table_details.authentication});isRowMenuOpen=false">Inactive</a>
+                    </li>
+                    <li *ngIf="utils.model_table_details.inactivatable=='Records Only' && row.recordState=='Inactive'">
+                        <a (click)="changeState.emit({state:'Active', row:row,reasonforEdit:utils.model_table_details.reasonforEdit,authentication:utils.model_table_details.authentication});isRowMenuOpen=false">Reactive</a>
+                    </li>
+
+                    <li *ngIf="utils.isStateChangeToArchive(utils.model_table_details) &&  utils.model_table_details.recordState!=='Archived Restorable' && utils.model_table_details.recordState!=='Archived Permanently'">
+                        <a (click)="changeState.emit({state:'Archived', row:row,reasonforEdit:utils.model_table_details.reasonforEdit,authentication:utils.model_table_details.authentication});isRowMenuOpen=false">Archive</a>
+                    </li>
+                    <li *ngIf="utils.model_table_details.archivable=='Records Only Restorable' && utils.model_table_details.recordState=='Archived Restorable'">
+                        <a (click)="changeState.emit({state:'Archived', row:row,reasonforEdit:utils.model_table_details.reasonforEdit,authentication:utils.model_table_details.authentication});isRowMenuOpen=false">Restore</a>
+                    </li>
+
+                    <li *ngIf="utils.isStateChangeToLineOut(utils.model_table_details) && utils.model_table_details.recordState!=='Soft Deleted'">
+                        <a (click)="changeState.emit({state:'Soft Deleted', row:row,reasonforEdit:utils.model_table_details.reasonforEdit,authentication:utils.model_table_details.authentication});isRowMenuOpen=false">Soft Delete</a>
+                    </li>
+                    <li>
+                        <a (click)="auditlog.emit({row:row})">Audit Log</a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Person edit and create -->
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='PersonEditCreate'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+                
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 55px;top: 7px;    padding: 0px 0">
+                    <li *ngIf="utils.isStateChangeToInactive(utils.model_table_details) && utils.model_table_details?.recordState!=='Inactive'">
+                        <a (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">Inactive</a>
+                    </li>
+                    <li *ngIf="utils.model_table_details?.inactivatable=='Records Only' && row?.recordState=='Inactive'">
+                        <a (click)="changeState.emit({state:'Active', row:row});isRowMenuOpen=false">Reactive</a>
+                    </li>
+
+                    <li *ngIf="utils.isStateChangeToArchive(utils.model_table_details) && utils.model_table_details?.recordState!=='Archived'">
+                        <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Archive</a>
+                    </li>
+                    <li *ngIf="utils.model_table_details?.archivable=='Records Only Restorable' && utils.model_table_details?.recordState=='Archived'">
+                        <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Archive</a>
+                    </li>
+
+                    <li *ngIf="utils.isStateChangeToLineOut(utils.model_table_details) && utils.model_table_details?.recordState!=='Soft Deleted'">
+                        <a (click)="changeState.emit({state:'Soft Deleted', row:row});isRowMenuOpen=false">Soft Delete</a>
+                    </li>
+                    <li>
+                        <a (click)="auditlog.emit({row:row})">Audit Log</a>
+                    </li>
+                </ul>
+            </div>
+
+
+
+            <!-- System User -->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='System_User'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+                
+
+
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 55px;top: 7px;    padding: 0px 0">
+                    <li class="disabled" style="color:gray">
+                        <a>Edit</a>
+                    </li>
+                    <li *ngIf="utils.isStateChangeToInactive(utils.model_table_details) && utils.model_table_details.recordState!=='Inactive'">
+                        <a (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">Inactive</a>
+                    </li>
+                    <li *ngIf="utils.model_table_details.inactivatable=='Records Only' && row.recordState=='Inactive'">
+                        <a (click)="changeState.emit({state:'Active', row:row});isRowMenuOpen=false">Reactive</a>
+                    </li>
+
+                    <li *ngIf="utils.isStateChangeToArchive(utils.model_table_details) && utils.model_table_details.recordState!=='Archived Restorable' && utils.model_table_details.recordState!=='Archived Permanently'">
+                        <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Archive</a>
+                    </li>
+                    <li *ngIf="utils.model_table_details.archivable=='Records Only Restorable' && utils.model_table_details.recordState=='Archived Restorable'">
+                        <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Restore</a>
+                    </li>
+
+                    <li *ngIf="utils.isStateChangeToLineOut(utils.model_table_details) && utils.model_table_details.recordState!=='Soft Deleted'">
+                        <a (click)="changeState.emit({state:'Soft Deleted', row:row});isRowMenuOpen=false">Soft Delete</a>
+                    </li>
+                    <li>
+                        <a (click)="auditlog.emit({row:row})">Audit Log</a>
+                    </li>
+                </ul>
+
+            </div>
+
+            <!-- Classification -->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='User_Classification'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+                
+
+
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 55px;top: 7px;    padding: 0px 0">
+                    <li class="disabled" style="color:gray">
+                        <a>Edit</a>
+                    </li>
+                    <li *ngIf="utils.isStateChangeToInactive(utils.model_table_details) && utils.model_table_details?.recordState!=='Inactive'">
+                        <a (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">Inactive</a>
+                    </li>
+                    <li *ngIf="utils.model_table_details?.inactivatable=='Records Only' && row.recordState=='Inactive'">
+                        <a (click)="changeState.emit({state:'Active', row:row});isRowMenuOpen=false">Reactive</a>
+                    </li>
+
+                    <li *ngIf="utils.isStateChangeToArchive(utils.model_table_details) && utils.model_table_details.recordState!=='Archived Restorable' && utils.model_table_details.recordState!=='Archived Permanently'">
+                        <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Archive</a>
+                    </li>
+                    <li *ngIf="utils.model_table_details?.archivable=='Records Only Restorable' && utils.model_table_details.recordState=='Archived Restorable'">
+                        <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Restore</a>
+                    </li>
+
+                    <li *ngIf="utils.isStateChangeToLineOut(utils.model_table_details) && utils.model_table_details?.recordState!=='Soft Deleted'">
+                        <a (click)="changeState.emit({state:'Soft Deleted', row:row});isRowMenuOpen=false">Soft Delete</a>
+                    </li>
+                    <li>
+                        <a (click)="auditlog.emit({row:row})">Audit Log</a>
+                    </li>
+                </ul>
+            </div>
+
+
+            <!--File Manager Configuration-->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='File_manager_config'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+              
+
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 55px;top: 7px;    padding: 0px 0">
+                    <li class="disabled" style="color:gray">
+                        <a>Edit</a>
+                    </li>
+                    <li *ngIf="utils.isStateChangeToInactive(utils.model_table_details) && utils.model_table_details?.recordState!=='Inactive'">
+                        <a (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">Inactive</a>
+                    </li>
+                    <li *ngIf="utils.model_table_details?.inactivatable=='Records Only' && row.recordState=='Inactive'">
+                        <a (click)="changeState.emit({state:'Active', row:row});isRowMenuOpen=false">Reactive</a>
+                    </li>
+
+                    <li *ngIf="utils.isStateChangeToArchive(utils.model_table_details) && utils.model_table_details.recordState!=='Archived Restorable' && utils.model_table_details.recordState!=='Archived Permanently'">
+                        <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Archive</a>
+                    </li>
+                    <li *ngIf="utils.model_table_details?.archivable=='Records Only Restorable' && utils.model_table_details.recordState=='Archived Restorable'">
+                        <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Restore</a>
+                    </li>
+
+                    <li *ngIf="utils.isStateChangeToLineOut(utils.model_table_details) && utils.model_table_details?.recordState!=='Soft Deleted'">
+                        <a (click)="changeState.emit({state:'Soft Deleted', row:row});isRowMenuOpen=false">Soft Delete</a>
+                    </li>
+                    <li>
+                        <a (click)="auditlog.emit({row:row})">Audit Log</a>
+                    </li>
+                </ul>
+            </div>  
+              
+
+           
+
+ <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component==Boilerplate_Text_Value" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+   
+
+    <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 55px;top: 7px;    padding: 0px 0">
+        <li class="disabled" style="color:gray">
+            <a>Edit</a>
+        </li>
+        <li *ngIf="utils.isStateChangeToInactive(utils.model_table_details) && utils.model_table_details?.recordState!=='Inactive'">
+            <a (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">Inactive</a>
+        </li>
+        <li *ngIf="utils.model_table_details?.inactivatable=='Records Only' && row.recordState=='Inactive'">
+            <a (click)="changeState.emit({state:'Active', row:row});isRowMenuOpen=false">Reactive</a>
+        </li>
+
+        <li *ngIf="utils.isStateChangeToArchive(utils.model_table_details) && utils.model_table_details.recordState!=='Archived Restorable' && utils.model_table_details.recordState!=='Archived Permanently'">
+            <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Archive</a>
+        </li>
+        <li *ngIf="utils.model_table_details?.archivable=='Records Only Restorable' && utils.model_table_details.recordState=='Archived Restorable'">
+            <a (click)="changeState.emit({state:'Archived', row:row});isRowMenuOpen=false">Restore</a>
+        </li>
+
+        <li *ngIf="utils.isStateChangeToLineOut(utils.model_table_details) && utils.model_table_details?.recordState!=='Soft Deleted'">
+            <a (click)="changeState.emit({state:'Soft Deleted', row:row});isRowMenuOpen=false">Soft Delete</a>
+        </li>
+        <li>
+            <a (click)="auditlog.emit({row:row})">Audit Log</a>
+        </li>
+    </ul>
+</div>
+
+            <!--File Manager Configuration SRV-->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='FMconfigSRV'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 50px;top: 0px;  padding: 5px;">
+                    <li>
+
+                        <span class="icon-width-18 glyphicon glyphicon-pencil disabled ng-scope" title="Edit Inline"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-triangle-top" title="Set Inactive" (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">
+                </span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-folder-close" title="Archive" (click)="changeState.emit({state:'Archived',row:row});isRowMenuOpen=false"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-ban-circle" title="Soft Delete" (click)="changeState.emit({state:'Soft Deleted',row:row});isRowMenuOpen=false"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-question-sign  ng-scope" title="Audit Log" (click)="auditlog.emit({row:row})"></span>
+                    </li>
+                </ul>
+            </div>
+
+            <!--File Manager Configuration SRVFileTableModel-->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='tableModel'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 50px;top: 0px;  padding: 5px;">
+                    <li>
+
+                        <span class="icon-width-18 glyphicon glyphicon-pencil disabled ng-scope" title="Edit Inline"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-triangle-top" title="Set Inactive" (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">
+                </span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-folder-close" title="Archive" (click)="changeState.emit({state:'Archived',row:row});isRowMenuOpen=false"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-ban-circle" title="Soft Delete" (click)="changeState.emit({state:'Soft Deleted',row:row});isRowMenuOpen=false"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-question-sign  ng-scope" title="Audit Log" (click)="auditlog.emit({row:row})"></span>
+                    </li>
+                </ul>
+            </div>
+
+
+            <!--File Manager Configuration SRVFileConfiguration-->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='fileConfig'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 50px;top: 0px;  padding: 5px;">
+                    <li>
+
+                        <span class="icon-width-18 glyphicon glyphicon-pencil disabled ng-scope" title="Edit Inline"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-triangle-top" title="Set Inactive" (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">
+                </span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-folder-close" title="Archive" (click)="changeState.emit({state:'Archived',row:row});isRowMenuOpen=false"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-ban-circle" title="Soft Delete" (click)="changeState.emit({state:'Soft Deleted',row:row});isRowMenuOpen=false"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-question-sign  ng-scope" title="Audit Log" (click)="auditlog.emit({row:row})"></span>
+                    </li>
+                </ul>
+            </div>
+
+            <!--File Manager Configuration SRVFileLink-->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='Link'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 50px;top: 0px;  padding: px;">
+                    <li>
+
+                        <span class="icon-width-18 glyphicon glyphicon-pencil disabled ng-scope" title="Edit Inline"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-triangle-top" title="Set Inactive" (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">
+                </span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-folder-close" title="Archive" (click)="changeState.emit({state:'Archived',row:row});isRowMenuOpen=false"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-ban-circle" title="Soft Delete" (click)="changeState.emit({state:'Soft Deleted',row:row});isRowMenuOpen=false"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-question-sign  ng-scope" title="Audit Log" (click)="auditlog.emit({row:row})"></span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- View Property Srv -->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='View_Property_Srv'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 55px;padding: 5px;">
+                    <li>
+                        <span class="icon-width-18 glyphicon glyphicon-pencil disabled" title="Edit Inline"></span>
+                        <span class="cursor-pointer icon-width-18 glyphicon glyphicon-triangle-top " title="Set Inactive" (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-folder-close" title="Archive" (click)="changeState.emit({state:'Archived',row:row});isRowMenuOpen=false"></span>
+
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-ban-circle" title="Soft Delete" (click)="changeState.emit({state:'Soft Deleted', row:row});isRowMenuOpen=false"></span>
+
+                        <span class="cursor-pointer icon-width-18 glyphicon glyphicon-question-sign" title="Audit Log" (click)="auditlog.emit({id:row.id})"></span></li>
+                </ul>
+            </div>
+
+
+            <!--View Property SrvDisplayQualifier-->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='DisplayQualifier'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 55px;padding: 5px;">
+                    <li>
+                        <span class="icon-width-18 glyphicon glyphicon-pencil disabled" title="Edit Inline"></span>
+
+                      
+
+                        <span class="cursor-pointer icon-width-18 glyphicon glyphicon-triangle-top" title="{{row.recordState == 'Soft Deleted' || row.recordState == 'Archived' || row.recordState == 'Active' ? 'Inactive':' Inactive'}}" (click)="changeState.emit({state:row.recordState == 'Soft Deleted' || row.recordState == 'Archived' || row.recordState == 'Active'  ? 'Inactive':'Inactive', row:row});isRowMenuOpenDisplay=false"></span>
+
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-folder-close" title="{{row.recordState =='Archive' ? 'Restore':' Archive'}}" (click)="changeState.emit({state:row.recordState =='Archive' ? 'Restored':'Archived', row:row});isRowMenuOpenDisplay=false"></span>
+
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-ban-circle " title="Soft Delete" (click)="changeState.emit({state:'Soft Deleted', row:row});isRowMenuOpenDisplay=false"></span>
+
+                        <span class="cursor-pointer icon-width-18 glyphicon glyphicon-question-sign" title="Audit Log" (click)="auditlog.emit({id:row.id})"></span></li>
+                </ul>
+            </div>
+
+
+            <!--View Property SrvDependencyQualifier-->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='DependencyQualifier'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 50px;top: 0px;  padding: 5px;">
+                    <li>
+
+                        <span class="icon-width-18 glyphicon glyphicon-pencil disabled ng-scope" title="Edit Inline"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-triangle-top" title="Set Inactive" (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">
+                </span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-folder-close" title="Archive" (click)="changeState.emit({state:'Archived',row:row});isRowMenuOpen=false"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-ban-circle" title="Soft Delete" (click)="changeState.emit({state:'Soft Deleted',row:row});isRowMenuOpen=false"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-question-sign  ng-scope" title="Audit Log" (click)="auditlog.emit({row:row})"></span>
+                    </li>
+                </ul>
+            </div>
+
+            <!--View Property SrvValidation-->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='Validation'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 50px;top: 0px;  padding: px;">
+                    <li>
+
+                        <span class="icon-width-18 glyphicon glyphicon-pencil disabled ng-scope" title="Edit Inline"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-triangle-top " title="Set Inactive" (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">
+                </span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-folder-close" title="Archive" (click)="changeState.emit({state:'Archived',row:row});isRowMenuOpen=false"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-ban-circle" title="Soft Delete" (click)="changeState.emit({state:'Soft Deleted',row:row});isRowMenuOpen=false"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-question-sign  ng-scope" title="Audit Log" (click)="auditlog.emit({row:row})"></span>
+                    </li>
+                </ul>
+            </div>
+
+            <!--sss-->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='FileLinkSRV'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 50px;top: 0px;  padding: px;">
+                    <li>
+
+                        <span class="icon-width-18 glyphicon glyphicon-pencil disabled ng-scope" title="Edit Inline"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-triangle-top" title="Set Inactive" (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">
+                </span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-folder-close" title="Archive" (click)="changeState.emit({state:'Archived',row:row});isRowMenuOpen=false"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-ban-circle" title="Soft Delete" (click)="changeState.emit({state:'Soft Deleted',row:row});isRowMenuOpen=false"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-question-sign  ng-scope" title="Audit Log" (click)="auditlog.emit({row:row})"></span>
+                    </li>
+                </ul>
+            </div>
+
+            <!--sss-->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='FileLinkSRVONE'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 50px;top: 0px;  padding: px;">
+                    <li>
+
+                        <span class="icon-width-18 glyphicon glyphicon-pencil disabled ng-scope" title="Edit Inline"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-triangle-top" title="Set Inactive" (click)="changeState.emit({state:'Inactive', row:row});isRowMenuOpen=false">
+                </span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-folder-close" title="Archive" (click)="changeState.emit({state:'Archived',row:row});isRowMenuOpen=false"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-ban-circle" title="Soft Delete" (click)="changeState.emit({state:'Soft Deleted',row:row});isRowMenuOpen=false"></span>
+                        <span class="icon-width-18 cursor-pointer glyphicon glyphicon-question-sign  ng-scope" title="Audit Log" (click)="auditlog.emit({row:row})"></span>
+                    </li>
+                </ul>
+            </div>
+
+
+            <!-- User Permission-->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='User_Permission_List'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+                
+
+
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 55px;top: 7px;    padding: 0px 0">
+                    
+                    <li>
+                        <a (click)="auditlog.emit({row:row})">Audit Log</a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Permission-->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='Permission'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+               
+
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 55px;top: 7px;    padding: 0px 0">
+                  
+                    <li>
+                        <a (click)="auditlog.emit({row:row})">Audit Log</a>
+                    </li>
+                </ul>
+            </div>
+
+            <!--Pick List-->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='Pick_List'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+
+                
+
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 55px;top: 7px;    padding: 0px 0">
+                
+                    <li>
+                        <a (click)="auditlog.emit({row:row})">Audit Log</a>
+                    </li>
+                </ul>
+            </div>
+
+            <!--User Audit-->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='listMember'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 55px;top: 7px;    padding: 0px 0">
+                    <li>
+                        <a (click)="auditlog.emit({row:row})">Audit Log</a>
+                       
+                    </li>
+                </ul>
+            </div>
+
+            <!--User Audit-->
+
+            <div class="dropdown row-menu" *ngIf="i==currentRowIndex && isRowMenuOpen && component=='listMember'" (mouseenter)="actionsVisibility.emit({isActionsVisible:true,event:$event})" (mouseleave)="actionsVisibility.emit({isActionsVisible:false,event:$event})">
+                <ul class="dropdown-menu row-menu" style="display: block;min-width: 50px;left: 55px;top: 7px;    padding: 0px 0">
+                    <li>
+                        <a (click)="auditlog.emit({row:row})">Audit Log</a>
+                        
+                    </li>
+                </ul>
+            </div>
+
+
+            <datatable-body-row tabindex="-1" [isSelected]="selector.getRowSelected(row)" [innerWidth]="innerWidth" [offsetX]="offsetX" [columns]="columns" [rowHeight]="getRowHeight(row)" [row]="row" [rowIndex]="getRowIndex(row)" [expanded]="getRowExpanded(row)"
+                [rowClass]="rowClass" (activate)="selector.onActivate($event, i)">
+
+            </datatable-body-row>
+
+        </datatable-row-wrapper>
+    </datatable-scroller>
+
+</datatable-selection>
